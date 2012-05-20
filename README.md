@@ -2,12 +2,8 @@ jinjet
 ------
 
 Static generator for Jinja2 templates with localized site tree at `/<language>`
-for each available localization. The output is static and deployable.
-
-I created this script because I missed Jinja2 block based templating and the
-Babel localization framework when using HTML5 frontend assemblers. It outputs a
-copy of the site with default translation in the root and a subsequent copy of
-each locale in a `language-code/` subdirectory.
+for each localization. The output is static and deployable. I created this script because I missed Jinja2 block based templating and the
+Babel localization framework when using HTML5 frontend assemblers. 
 
 Code is adapted from Armin Ronacher's Flask-Babel extensions.
 
@@ -19,7 +15,7 @@ Install
 Using jinjet
 ------------
 
-I'm using [brunch](http://brunch.io) to assemble a frontend. This guide will
+I'm using [brunch](http://brunch.io) to assemble the frontend. This guide will
 assume the same, but you can use this for any directory of templates to generate
 a static localized site tree.
 
@@ -88,7 +84,10 @@ Let's see what jinjet generated.
     public/
     ├── hi.html
     ├── index.html
-    ├── is
+    ├── de
+    │   ├── hi.html
+    │   └── index.html
+    ├── en
     │   ├── hi.html
     │   └── index.html
     ├── javascripts
@@ -99,7 +98,10 @@ Let's see what jinjet generated.
     
     
 If you look at `public/de/hi.html` you should see the template, extended from
-`index.html` with the strings translated.
+`index.html` with the strings translated. Jinja2 block based templating and
+Babel translation FTW. The root templates are left intact so you might want to
+redirect from the root to a default locale in the server conf. Jinja2 HTML
+templates are not pretty in the browser.
 
 Template Context
 ----------------
@@ -107,12 +109,21 @@ Template Context
 jinjet renders all templates with this context for you to play with.
 
 + `now`: `datetime.datetime.now()` 
-+ `locale`: The current `<Locale>` object
++ `current_locale`: The current `<Locale>` object
++ `locales`: List of all available locales
 
 The locale object has some useful properties, namely `language`, `display_name`
 and tools to get the right scientific formatting and localized date strings.
+Loop over `locales` to display a list of available language translations on your
+site:
 
-Planned Features
+    <div class="language-picker">
+      {% for locale in locales if locale != current_locale %}
+      <a href="/{{ locale.language }}/" class="btn">{{ locale.display_name }}</a>
+      {% endfor %}
+    </div>
+
+Missing Features
 ----------------
 
 + Output a CoffeeScript translation catalog for all locales, or compiled Eco and
