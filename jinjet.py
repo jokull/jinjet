@@ -1,6 +1,6 @@
 # encoding=utf-8
 
-import os, argparse
+import os, argparse, sys
 from threading import local
 
 from jinja2 import TemplateNotFound, FileSystemLoader, Environment
@@ -11,6 +11,8 @@ if os.environ.get('LC_CTYPE', '').lower() == 'utf-8':
 
 from datetime import datetime
 from babel import dates, numbers, support, Locale
+from babel.messages.frontend import parse_mapping
+from babel.util import pathmatch
 
 _language = None
 _active = local()
@@ -107,7 +109,8 @@ def translations():
 def context():
     return dict(
         now=datetime.now(),
-        locale=get_locale(),
+        current_locale=get_locale(),
+        locales=translations(),
     )
 
 def write_template(name, folder=None):
@@ -126,6 +129,7 @@ parser.add_argument('--verbose', '-v', action='count')
 parser.add_argument('--output', '-o', default='public/')
 parser.add_argument('--catalog', '-c', default='translations/')
 parser.add_argument('--templates', '-t', default='app/assets/')
+parser.add_argument('--babelconf', '-b', default='babel.cfg')
 parser.add_argument('--baselocale', default='en')
 
 cli = parser.parse_args()
@@ -148,14 +152,28 @@ env.install_gettext_callables(
 
 
 def main():
+    
+    try:
+        mappings, _ = parse_mapping(open(cli.babelconf))
+    except IOError:
+        sys.exit("Could not find Babel conf ({0})".format(cli.babelconf))
+    
+    search_paths = [search_path for (search_path, _) in mappings]
+    
+    def is_template(name):
+        full_name = os.path.join(cli.templates, name)
+        for path in search_paths:
+            if pathmatch(path, full_name):
+                return True
+        
     for locale in translations():
         activate_locale(locale)
         if cli.verbose:
             print "Processing locale:", get_locale()
         for name in env.list_templates():
+            if not is_template(name):
+                continue
             folder = get_locale().language
-            if folder == cli.baselocale:
-                folder = None
             if cli.verbose > 1:
                 print "Writing template: ", name
             write_template(name, folder)
