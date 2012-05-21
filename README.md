@@ -10,7 +10,7 @@ Code is adapted from Armin Ronacher's Flask-Babel extensions.
 Install
 -------
 
-`$ pip install git://github.com/jokull/jinjet.git`
+`$ pip install git+git://github.com/jokull/jinjet.git`
 
 Using jinjet
 ------------
