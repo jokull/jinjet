@@ -133,6 +133,11 @@ Missing Features
 Changelog
 ---------
 
+### 0.2.1
+
++ Run without translations catalog; useful for using Jinja2 features but not 
+  translated sites.
+
 ### 0.2
 
 + `--watch`
