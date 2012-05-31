@@ -92,31 +92,28 @@ def npgettext(context, singular, plural, num, **variables):
     return t.unpgettext(context, singular, plural, num) % variables
 
 
-def translations():
+def get_locales():
     """Returns a list of all the locales translations exist for.  The
     list returned will be filled with actual locale objects and not just
     strings. A no-op translation is added for the `default_locale`.
     """
+    baselocale = Locale.parse(cli.baselocale)
+    result = {baselocale.language: baselocale}
     if not os.path.isdir(cli.catalog):
-        return []
-    result = set([Locale.parse(cli.baselocale)])
+        return result
     for folder in os.listdir(cli.catalog):
         locale_dir = os.path.join(cli.catalog, folder, 'LC_MESSAGES')
         if not os.path.isdir(locale_dir):
             continue
+        if folder in result and cli.verbose:
+            print "Warning: Translation found for the base locale [{}]".format(folder)
         if filter(lambda x: x.endswith('.mo'), os.listdir(locale_dir)):
-            result.add(Locale.parse(folder))
-    return result
+            locale = Locale.parse(folder)
+            result[locale.language] = locale
+    return result.values()
 
 
-def context():
-    return dict(
-        now=datetime.now(),
-        current_locale=get_locale(),
-        locales=translations(),
-    )
-
-def write_template(name, folder=None):
+def write_template(name, folder=None, context={}):
     target = cli.output
     if folder:
         target = os.path.join(target, folder)
@@ -124,7 +121,7 @@ def write_template(name, folder=None):
         os.makedirs(target)
     with open(os.path.join(target, name), 'w') as fp:
         template = env.get_template(name)
-        fp.write(template.render(**context()).encode('utf-8'))
+        fp.write(template.render(**context).encode('utf-8'))
 
         
 parser = argparse.ArgumentParser()
@@ -168,8 +165,14 @@ def build():
         for path in search_paths:
             if pathmatch(path, full_name):
                 return True
-        
-    for locale in translations():
+    
+    locales = get_locales()
+    
+    context = dict(
+        locales=locales,
+    )
+    
+    for locale in locales:
         activate_locale(locale)
         if cli.verbose:
             print "Processing locale:", get_locale()
@@ -179,7 +182,11 @@ def build():
             folder = get_locale().language
             if cli.verbose > 1:
                 print "Writing template: ", name
-            write_template(name, folder)
+            context = dict(context, 
+                now=datetime.now(),
+                current_locale=get_locale()
+            )
+            write_template(name, folder, context)
 
 
 def main():
