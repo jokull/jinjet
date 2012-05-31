@@ -3,7 +3,7 @@
 
 from setuptools import setup
 
-requires = ['jinja2', 'babel']
+requires = ['jinja2', 'babel', 'watchdog']
 
 try:
     import argparse

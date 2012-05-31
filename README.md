@@ -129,4 +129,15 @@ Missing Features
 + Output a CoffeeScript translation catalog for all locales, or compiled Eco and
   Handlebars templates for all locales.
 + Add date and currency template filters like Flask-Babel.
-+ Add `--watch` hook to generate site on file changes.
+
+Changelog
+---------
+
+### 0.2
+
++ `--watch`
+
+### 0.1
+
++ Initial Release
+

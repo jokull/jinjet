@@ -1,6 +1,6 @@
 # encoding=utf-8
 
-import os, argparse, sys
+import os, argparse, sys, time
 from threading import local
 
 from jinja2 import TemplateNotFound, FileSystemLoader, Environment
@@ -13,6 +13,9 @@ from datetime import datetime
 from babel import dates, numbers, support, Locale
 from babel.messages.frontend import parse_mapping
 from babel.util import pathmatch
+
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 _language = None
 _active = local()
@@ -131,6 +134,7 @@ parser.add_argument('--catalog', '-c', default='translations/')
 parser.add_argument('--templates', '-t', default='app/assets/')
 parser.add_argument('--babelconf', '-b', default='babel.cfg')
 parser.add_argument('--baselocale', default='en')
+parser.add_argument('--watch', '-w', action='store_true')
 
 cli = parser.parse_args()
 
@@ -149,15 +153,14 @@ env.install_gettext_callables(
     lambda s, p, n: get_translations().ungettext(s, p, n),
     newstyle=True
 )
-
-
-def main():
+            
+def build():
     
     try:
         mappings, _ = parse_mapping(open(cli.babelconf))
     except IOError:
         sys.exit("Could not find Babel conf ({0})".format(cli.babelconf))
-    
+        
     search_paths = [search_path for (search_path, _) in mappings]
     
     def is_template(name):
@@ -177,3 +180,27 @@ def main():
             if cli.verbose > 1:
                 print "Writing template: ", name
             write_template(name, folder)
+
+
+def main():
+
+    class ChangeHandler(FileSystemEventHandler):
+        def on_any_event(self, event):
+            if event.is_directory:
+                return
+            print "Template update detected"
+            build()
+    
+    build()
+    
+    if cli.watch:    
+        event_handler = ChangeHandler()
+        observer = Observer()
+        observer.schedule(event_handler, cli.templates, recursive=True)
+        observer.start()
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            observer.stop()
+        observer.join()
